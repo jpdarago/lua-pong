@@ -76,7 +76,7 @@ end
 
 -- love callback functions
 do
-	local left,right,ball
+	local left_paddle,right_paddle,ball
 	local width,height
 	local paddle_width,paddle_height,ball_radius
 	local ball_x_speed,ball_y_speed
@@ -121,7 +121,7 @@ do
 		love.graphics.setFont(love.graphics.newFont(20))
 		love.graphics.setCaption('Pong!')
 
-		state = 'begin'
+		state = 'serve'
 	end
 
 	function move_down(paddle,dt)
@@ -133,8 +133,9 @@ do
 	
 	function move_up(paddle,dt)
 		local new_y = paddle:getY() - dt*paddle_y_speed
-		if new_y >= 0 then 
-			paddle:setY(new_y)
+		paddle:setY(new_y)
+		if new_y < 0 then 
+			paddle:setY(0)
 		end
 	end
 
@@ -148,6 +149,7 @@ do
 
 	function check_paddle_ball_collision(paddle,ball)
 		bx,by,br = ball:getX(),ball:getY(),ball:getRadius()
+
 		if paddle:collides(bx,by-br) then
 			ball_y_speed = -ball_y_speed
 			ball:setY(by+br)
@@ -155,6 +157,7 @@ do
 			ball_y_speed = -ball_y_speed
 			ball:setY(by-br)
 		end
+
 		if paddle:collides(bx-br,by) then
 			ball_x_speed = -ball_x_speed
 			ball:setX(bx+br)
@@ -183,7 +186,7 @@ do
 				score_right = score_right + 1
 				current_ball_owner = left_paddle
 			end
-			state = 'begin'
+			state = 'serve'
 			ball_x_speed = -ball_x_speed
 			if x <= 0 then
 				ball:setX(0)
@@ -199,16 +202,16 @@ do
 	end
 
 	function love.update(dt)
-		if state == 'begin' then
+		if state == 'serve' then
 			restart_game()
-			state = 'wait'
+			state = 'serving'
 		else
 			check_keys(left_paddle,"s","w",dt)
 			check_keys(right_paddle,"k","i",dt)
 			
-			if state == 'wait' then
+			if state == 'serving' then
 				if love.keyboard.isDown(' ') then
-					state = 'loop'
+					state = 'playing'
 				else
 					ball_follow(ball,current_ball_owner)	
 				end
