@@ -94,7 +94,7 @@ do
 	end
 
 	function restart_game()
-		ball_x_speed,ball_y_speed = 7,-7
+		ball_x_speed,ball_y_speed = 13,-13
 		ball_follow(ball,current_ball_owner)
 	end
 
@@ -107,7 +107,6 @@ do
 		paddle_x_speed,paddle_y_speed = 0,650
 	
 		ball_radius = 10
-		ball_x_speed,ball_y_speed = 13,-13
 
 		left_paddle = Paddle.new(0,paddle_start_height,
 			paddle_width,paddle_height)
