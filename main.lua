@@ -23,13 +23,13 @@ function Paddle.setY(self,y)
 end
 
 function Paddle.collides(self,point_x,point_y)
-	x,y,w,h = self.x,self.y,self.width,self.height
+	local x,y,w,h = self.x,self.y,self.width,self.height
 	return	x <= point_x and x + w >= point_x and
 			y <= point_y and y + h >= point_y
 end
 
 function Paddle.draw(self)
-	x,y,w,h = self.x,self.y,self.width,self.height
+	local x,y,w,h = self.x,self.y,self.width,self.height
 	love.graphics.rectangle("fill", x, y, w, h)
 end
 
@@ -55,7 +55,7 @@ function Ball.new(x,y,radius,speed_x,speed_y)
 end
 
 function Ball.draw(self)
-	x,y,r = self.x,self.y,self.radius
+	local x,y,r = self.x,self.y,self.radius
 	love.graphics.circle("fill", x, y, r)
 end
 
@@ -173,7 +173,7 @@ do
 	end
 
 	function check_paddle_ball_collision(paddle,ball)
-		bx,by,br = ball:getX(),ball:getY(),ball:getRadius()
+		local bx,by,br = ball:getX(),ball:getY(),ball:getRadius()
 
 		if paddle:collides(bx,by-br) then
 			ball:verticalBounce()
