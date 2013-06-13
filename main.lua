@@ -198,11 +198,11 @@ do
 			ball:verticalBounce()
 			ball:setY(y <= 0 and 0 or height-r)	
 		end
-		if x <= 0 or x >= width-r then
-			if x >= width-r then
+		if x < 0 or x > width then
+			if x > width then
 				score_left = score_left + 1
 				current_ball_owner = right_paddle
-			elseif x <= 0 then
+			elseif x < 0 then
 				score_right = score_right + 1
 				current_ball_owner = left_paddle
 			end
