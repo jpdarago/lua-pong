@@ -2,10 +2,11 @@
 local Paddle = {}
 Paddle.__index = Paddle
 
-function Paddle.new(x,y,width,height)
+function Paddle.new(x,y,width,height,speed_y)
 	local self = setmetatable({},Paddle)
 	self.x,self.y = x,y
 	self.width,self.height = width,height
+	self.speed_y = speed_y
 	return self
 end
 
@@ -32,21 +33,25 @@ function Paddle.draw(self)
 	love.graphics.rectangle("fill", x, y, w, h)
 end
 
+function Paddle.moveDown(self,dt)
+	self.y = self.y + self.speed_y*dt	
+end
+
+function Paddle.moveUp(self,dt)
+	self.y = self.y - self.speed_y*dt	
+end
+
 -- ball class and methods
 local Ball = {}
 Ball.__index = Ball
 
-function Ball.new(x,y,radius)
+function Ball.new(x,y,radius,speed_x,speed_y)
 	local self = setmetatable({},Ball)
 	self.x, self.y = x,y
 	self.radius = radius
+	self.speed_x = speed_x
+	self.speed_y = speed_y
 	return self
-end
-
-function Ball.collides(self,point_x,point_y)
-	x,y,r = self.x, self.y, self.radius
-	dx,dy = point_x - x, point_y - y
-	return dx*dx + dy*dy <= r*r
 end
 
 function Ball.draw(self)
@@ -74,13 +79,36 @@ function Ball.getRadius(self)
 	return self.radius
 end
 
+function Ball.getXSpeed(self)
+	return self.speed_x
+end
+
+function Ball.getYSpeed(self)
+	return self.speed_y
+end
+
+function Ball.horizontalBounce(self)
+	self.speed_x = -self.speed_x
+end
+
+function Ball.verticalBounce(self)
+	self.speed_y = -self.speed_y
+end
+
+function Ball.setSpeed(self,speed_x,speed_y)
+	self.speed_x,self.speed_y = speed_x,speed_y
+end
+
+function Ball.move(self,dt)
+	self.x = self.x + self.speed_x*dt
+	self.y = self.y + self.speed_y*dt
+end
+
 -- love callback functions
 do
 	local left_paddle,right_paddle,ball
 	local width,height
 	local paddle_width,paddle_height,ball_radius
-	local ball_x_speed,ball_y_speed
-	local paddle_x_speed,paddle_y_speed
 	local score_left, score_right
 	local state,current_ball_owner
 
@@ -94,7 +122,7 @@ do
 	end
 
 	function restart_game()
-		ball_x_speed,ball_y_speed = 13,-13
+		ball:setSpeed(600,-600)
 		ball_follow(ball,current_ball_owner)
 	end
 
@@ -104,14 +132,13 @@ do
 		
 		paddle_height,paddle_width = 120,20
 		paddle_start_height = height/2 - paddle_height
-		paddle_x_speed,paddle_y_speed = 0,650
 	
 		ball_radius = 10
 
 		left_paddle = Paddle.new(0,paddle_start_height,
-			paddle_width,paddle_height)
+			paddle_width,paddle_height,600)
 		right_paddle = Paddle.new(width-paddle_width,
-			paddle_start_height,paddle_height,paddle_height)
+			paddle_start_height,paddle_height,paddle_height,600)
 		ball = Ball.new(width/2,height/2,ball_radius)	
 
 		score_left, score_right = 0, 0
@@ -124,16 +151,15 @@ do
 	end
 
 	function move_down(paddle,dt)
-		local new_y = paddle:getY() + dt*paddle_y_speed
-		if new_y + paddle_height < height then 
-			paddle:setY(new_y)
+		paddle:moveDown(dt)
+		if paddle:getY()+paddle_height >= height then 
+			paddle:setY(height-paddle_height)
 		end
 	end
 	
 	function move_up(paddle,dt)
-		local new_y = paddle:getY() - dt*paddle_y_speed
-		paddle:setY(new_y)
-		if new_y < 0 then 
+		paddle:moveUp(dt)
+		if paddle:getY() < 0 then 
 			paddle:setY(0)
 		end
 	end
@@ -150,18 +176,18 @@ do
 		bx,by,br = ball:getX(),ball:getY(),ball:getRadius()
 
 		if paddle:collides(bx,by-br) then
-			ball_y_speed = -ball_y_speed
+			ball:verticalBounce()
 			ball:setY(by+br)
 		elseif paddle:collides(bx,by+br) then
-			ball_y_speed = -ball_y_speed
+			ball:verticalBounce()
 			ball:setY(by-br)
 		end
 
 		if paddle:collides(bx-br,by) then
-			ball_x_speed = -ball_x_speed
+			ball:horizontalBounce()
 			ball:setX(bx+br)
 		elseif paddle:collides(bx+br,by) then
-			ball_x_speed = -ball_x_speed
+			ball:horizontalBounce()
 			ball:setX(bx-br)
 		end
 	end
@@ -169,35 +195,21 @@ do
 	function check_ball_arena_collision(ball)
 		local x,y,r = ball:getX(),ball:getY(),ball:getRadius()
 		if y <= 0 or y >= height-r then
-			ball_y_speed = -ball_y_speed
-			if y <= 0 then	
-				ball:setY(0)
-			else 
-				ball:setY(height-r)	
-			end
+			ball:verticalBounce()
+			ball:setY(y <= 0 and 0 or height-r)	
 		end
 		if x <= 0 or x >= width-r then
 			if x >= width-r then
 				score_left = score_left + 1
 				current_ball_owner = right_paddle
-			end
-			if x <= 0 then
+			elseif x <= 0 then
 				score_right = score_right + 1
 				current_ball_owner = left_paddle
 			end
 			state = 'serve'
-			ball_x_speed = -ball_x_speed
-			if x <= 0 then
-				ball:setX(0)
-			else
-				ball:setX(width-r)
-			end
+			ball:horizontalBounce()
+			ball:setX(x <= 0 and 0 or width-r)
 		end
-	end
-
-	function move_ball(ball)
-		ball:setX(ball:getX()+ball_x_speed)
-		ball:setY(ball:getY()+ball_y_speed)
 	end
 
 	function love.update(dt)
@@ -218,12 +230,12 @@ do
 				check_paddle_ball_collision(left_paddle,ball)
 				check_paddle_ball_collision(right_paddle,ball)
 				check_ball_arena_collision(ball)
-				move_ball(ball)
+				ball:move(dt)
 			end
 		end
 	end
 
-	function draw_middle_line()
+	function draw_background()
 		local line_length, i = 50,0
 		while i < height do
 			love.graphics.line(width/2,i,width/2,i+line_length)	
@@ -231,12 +243,20 @@ do
 		end
 	end
 
-	function love.draw()
+	function print_scores()
+		love.graphics.print(score_left,width/2-25,0)
+		love.graphics.print(score_right,width/2+10,0)
+	end
+
+	function draw_objects()
 		left_paddle:draw()
 		right_paddle:draw()
 		ball:draw()
-		love.graphics.print(score_left,width/2-25,0)
-		love.graphics.print(score_right,width/2+10,0)
-		draw_middle_line();
+	end
+
+	function love.draw()
+		draw_background()
+		draw_objects()
+		print_scores()
 	end
 end
