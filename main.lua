@@ -2,6 +2,7 @@
 local Paddle = {}
 Paddle.__index = Paddle
 
+local EPS = 1e-4
 function Paddle.new(x,y,width,height,speed_y)
 	local self = setmetatable({},Paddle)
 	self.x,self.y = x,y
@@ -24,8 +25,8 @@ end
 
 function Paddle.collides(self,point_x,point_y)
 	local x,y,w,h = self.x,self.y,self.width,self.height
-	return	x <= point_x and x + w >= point_x and
-			y <= point_y and y + h >= point_y
+	return	x <= point_x-EPS and x + w >= point_x+EPS and
+			y <= point_y-EPS and y + h >= point_y+EPS
 end
 
 function Paddle.draw(self)
@@ -100,8 +101,8 @@ function Ball.setSpeed(self,speed_x,speed_y)
 end
 
 function Ball.setSpeedModule(self,speed_mod_x,speed_mod_y)
-	 local dir_x = self.speed_x < 0 and -1 or 1
-	 local dir_y = self.speed_y < 0 and -1 or 1
+	 local dir_x = self.speed_x < EPS and -1 or 1
+	 local dir_y = self.speed_y < EPS and -1 or 1
 
 	 self.speed_x = dir_x * speed_mod_x
 	 self.speed_y = dir_y * speed_mod_y
@@ -122,7 +123,7 @@ do
 	local ball_speed
 
 	function ball_follow(ball,current_ball_owner)
-		if current_ball_owner:getX() == 0 then
+		if current_ball_owner:getX() < EPS then
 			ball:setX(paddle_width+ball:getRadius())
 		else 
 			ball:setX(width - paddle_width - ball:getRadius())
@@ -205,18 +206,18 @@ do
 		local x,y,r = ball:getX(),ball:getY(),ball:getRadius()
 		if y <= 0 or y >= height-r then
 			ball:verticalBounce()
-			ball:setY(y <= 0 and 0 or height-r)	
+			ball:setY(y <= EPS and 0 or height-r)	
 		end
-		if x+2*r < 0 or x-2*r > width then
-			if x-2*r > width then
+		if x+2*r <= EPS or x-2*r >= width+EPS then
+			if x-2*r >= EPS+width then
 				score_left = score_left + 1
 				current_ball_owner = right_paddle
-			elseif x+2*r < 0 then
+			elseif x+2*r <= EPS then
 				score_right = score_right + 1
 				current_ball_owner = left_paddle
 			end
 			state = 'serve'
-			ball:setX(x <= 0 and 0 or width-r)
+			ball:setX(x <= EPS and 0 or width-r)
 		end
 	end
 
