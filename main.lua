@@ -99,6 +99,14 @@ function Ball.setSpeed(self,speed_x,speed_y)
 	self.speed_x,self.speed_y = speed_x,speed_y
 end
 
+function Ball.setSpeedModule(self,speed_mod_x,speed_mod_y)
+	 local dir_x = self.speed_x < 0 and -1 or 1
+	 local dir_y = self.speed_y < 0 and -1 or 1
+
+	 self.speed_x = dir_x * speed_mod_x
+	 self.speed_y = dir_y * speed_mod_y
+end
+
 function Ball.move(self,dt)
 	self.x = self.x + self.speed_x*dt
 	self.y = self.y + self.speed_y*dt
@@ -111,6 +119,7 @@ do
 	local paddle_width,paddle_height,ball_radius
 	local score_left, score_right
 	local state,current_ball_owner
+	local ball_speed
 
 	function ball_follow(ball,current_ball_owner)
 		if current_ball_owner:getX() == 0 then
@@ -122,7 +131,7 @@ do
 	end
 
 	function restart_game()
-		ball:setSpeed(600,-600)
+		ball:setSpeed(ball_speed,-ball_speed)
 		ball_follow(ball,current_ball_owner)
 	end
 
@@ -133,7 +142,7 @@ do
 		paddle_height,paddle_width = 120,20
 		paddle_start_height = height/2 - paddle_height
 	
-		ball_radius = 10
+		ball_radius,ball_speed = 10,600
 
 		left_paddle = Paddle.new(0,paddle_start_height,
 			paddle_width,paddle_height,600)
@@ -172,23 +181,23 @@ do
 		end
 	end
 
-	function check_paddle_ball_collision(paddle,ball)
+	function check_paddle_ball_collision(paddle,ball,dt)
 		local bx,by,br = ball:getX(),ball:getY(),ball:getRadius()
 
 		if paddle:collides(bx,by-br) then
 			ball:verticalBounce()
-			ball:setY(by+br)
+			ball:setY(by+2*br)
 		elseif paddle:collides(bx,by+br) then
 			ball:verticalBounce()
-			ball:setY(by-br)
+			ball:setY(by-2*br)
 		end
 
 		if paddle:collides(bx-br,by) then
 			ball:horizontalBounce()
-			ball:setX(bx+br)
+			ball:setX(bx+2*br)
 		elseif paddle:collides(bx+br,by) then
 			ball:horizontalBounce()
-			ball:setX(bx-br)
+			ball:setX(bx-2*br)
 		end
 	end
 
@@ -198,28 +207,37 @@ do
 			ball:verticalBounce()
 			ball:setY(y <= 0 and 0 or height-r)	
 		end
-		if x < 0 or x > width then
-			if x > width then
+		if x+2*r < 0 or x-2*r > width then
+			if x-2*r > width then
 				score_left = score_left + 1
 				current_ball_owner = right_paddle
-			elseif x < 0 then
+			elseif x+2*r < 0 then
 				score_right = score_right + 1
 				current_ball_owner = left_paddle
 			end
 			state = 'serve'
-			ball:horizontalBounce()
 			ball:setX(x <= 0 and 0 or width-r)
 		end
 	end
 
 	function love.update(dt)
+		local changed = false
+		if love.keyboard.isDown("+") then
+			ball_speed = ball_speed + 200*dt
+			changed = true
+		elseif love.keyboard.isDown("-") then
+			ball_speed = ball_speed - 200*dt
+			changed = true
+		end
+
+		if changed then
+			ball:setSpeedModule(ball_speed,ball_speed)
+		end
+
 		if state == 'serve' then
 			restart_game()
 			state = 'serving'
-		else
-			check_keys(left_paddle,"s","w",dt)
-			check_keys(right_paddle,"k","i",dt)
-			
+		else	
 			if state == 'serving' then
 				if love.keyboard.isDown(' ') then
 					state = 'playing'
@@ -227,11 +245,14 @@ do
 					ball_follow(ball,current_ball_owner)	
 				end
 			else
-				check_paddle_ball_collision(left_paddle,ball)
-				check_paddle_ball_collision(right_paddle,ball)
+				check_paddle_ball_collision(left_paddle,ball,dt)
+				check_paddle_ball_collision(right_paddle,ball,dt)
 				check_ball_arena_collision(ball)
 				ball:move(dt)
 			end
+
+			check_keys(left_paddle,"s","w",dt)
+			check_keys(right_paddle,"k","i",dt)
 		end
 	end
 
